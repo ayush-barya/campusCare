@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String?
+  name      String?
+  phone     String?
+  altPhone  String?
+  roomNumber String?
+  role      String   @default("STUDENT") // 'STUDENT' or 'ADMIN'
+  tickets   Ticket[] @relation("CreatedTickets")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Removed enum Role
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique // e.g., 'Electricity', 'Plumbing'
+  tickets   Ticket[]
+}
+
+model Ticket {
+  id               Int          @id @default(autoincrement())
+  location         String
+  description      String
+  photoUrl         String?
+  status           String       @default("OPEN")
+  priority         String       @default("MEDIUM") // "LOW", "MEDIUM", "HIGH"
+  workerToken      String?      @unique
+  reopenToken      String?      @unique
+  
+  category         Category     @relation(fields: [categoryId], references: [id])
+  categoryId       String
+
+  creator          User         @relation("CreatedTickets", fields: [creatorId], references: [id])
+  creatorId        String
+  
+  assignments      Assignment[]
+  statusHistory    StatusHistory[]
+
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+// Removed enum TicketStatus
+
+model Worker {
+  id          String       @id @default(cuid())
+  name        String
+  department  String       @default("General")
+  phone       String       @unique
+  assignments Assignment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  worker      Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  workerId    String
+  
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId    Int
+
+  assignedAt  DateTime @default(now())
+}
+
+model StatusHistory {
+  id          String   @id @default(cuid())
+  status      String   // the new status
+  changedBy   String   // 'SYSTEM', 'STUDENT', 'ADMIN', 'WORKER'
+  
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId    Int
+
+  changedAt   DateTime @default(now())
+}
